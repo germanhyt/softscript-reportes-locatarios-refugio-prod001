@@ -77,20 +77,16 @@ credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCO
 bigquery_client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 # === CONFIGURACIÓN MENSUAL ===
-MES_ACTUAL = 6  # Junio
-ANIO_ACTUAL_MENSUAL = 2025
+MES_ACTUAL = datetime.today().month
+ANIO_ACTUAL_MENSUAL = datetime.today().year
 ANIO_COMPARACION_MENSUAL = ANIO_ACTUAL_MENSUAL - 1
-# RESTAURANTE_OBJETIVO = 'Anticuching'
-# RESTAURANTE_OBJETIVO = 'Saltao'
-RESTAURANTE_OBJETIVO = 'Patio Cavenecia'
+
+# RESTAURANTE_OBJETIVO = 'Patio Cavenecia'
 NOMBRE_MES_ACTUAL = month_map[MES_ACTUAL]
 
 def configurar_analisis_mensual(anio_actual=None, mes_actual=None):
     """
     Configura el análisis mensual dinámicamente
-    Args:
-        anio_actual: Año actual para el análisis (por defecto 2025)
-        mes_actual: Mes actual para el análisis (1-12, por defecto 6=Junio)
     """
     global MES_ACTUAL, ANIO_ACTUAL_MENSUAL, ANIO_COMPARACION_MENSUAL, NOMBRE_MES_ACTUAL
     
@@ -522,27 +518,6 @@ def generar_analisis_anual_comparativo(restaurante):
 
 
 if __name__ == "__main__":
-    # print("=== GENERADOR DE ANÁLISIS ANUAL COMPARATIVO ===")
-    # print(f"Restaurante objetivo: {RESTAURANTE_OBJETIVO}")
-    # print(f"Análisis: {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL}")
-    
-    # print("\n🔧 Configuración dinámica disponible:")
-    # print("   - configurar_analisis_mensual()  # Usar valores por defecto")
-    # print("   - configurar_analisis_mensual(anio_actual=2024)  # Analizar 2024 vs 2023")
-    
-    # print("\n" + "="*60)
-    # print("EJECUTANDO ANÁLISIS ANUAL COMPARATIVO:")
-    # print("="*60)
-    
-    # # Análisis anual comparativo (gráficos de líneas y tablas)
-    # print("\nANÁLISIS ANUAL COMPARATIVO")
-    # print("-" * 40)
-    # generar_analisis_anual_comparativo(RESTAURANTE_OBJETIVO)
-    
-    # print("\n" + "="*60)
-    # print("ANÁLISIS FINALIZADO")
-    # print("Revisa la carpeta 'reportes4' para ver los gráficos de líneas y tablas generados")
-    # print("="*60)
     
     for locatario in locatarios_map:
         print(f"\n Iniciando análisis para: {locatario}")

@@ -78,22 +78,21 @@ bigquery_client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 
 # Función para verfiicar si la tabla sales_df existe
-def visualizar_tabla_sales_df():
-    query = f"SELECT * FROM `{PROJECT_ID}.{DATASET_VENTAS_ID}.sales_df` LIMIT 100"
-    try:
-        df = bigquery_client.query(query).to_dataframe()
-        print("Tabla 'sales_df':")
-        print(df.head())  # Mostrar las primeras filas
-    except Exception as e:
-        print(f"Error al consultar la tabla 'sales_df': {e}")
-
+# def visualizar_tabla_sales_df():
+#     query = f"SELECT * FROM `{PROJECT_ID}.{DATASET_VENTAS_ID}.sales_df` LIMIT 100"
+#     try:
+#         df = bigquery_client.query(query).to_dataframe()
+#         print("Tabla 'sales_df':")
+#         print(df.head())  # Mostrar las primeras filas
+#     except Exception as e:
+#         print(f"Error al consultar la tabla 'sales_df': {e}")
 
 # === CONFIGURACIÓN DINÁMICA DE AÑOS ===
-ANIO_ACTUAL = 2025          
+ANIO_ACTUAL = datetime.now().year          
 ANIO_COMPARACION = ANIO_ACTUAL - 1     
 
 
-RESTAURANTE_OBJETIVO = 'Anticuching'  # Restaurante a analizar
+# RESTAURANTE_OBJETIVO = 'Anticuching'  
 
 # Función para cambiar años dinámicamente
 def configurar_anos_comparacion(anio_actual=None, anio_comparacion=None):
@@ -484,19 +483,7 @@ def obtener_datos_anio_comparacion_real(restaurante_objetivo):
     print(f" No se encontraron datos del {ANIO_COMPARACION} en ningún restaurante")
     return pd.DataFrame()    
 if __name__ == "__main__":
-    # print("=== GENERADOR DE REPORTES COMPARATIVOS DINÁMICOS ===")
-    # print(f"Restaurante objetivo: {RESTAURANTE_OBJETIVO}")
-    # print(f"Años de comparación: {ANIO_ACTUAL} vs {ANIO_COMPARACION}")
-    # print("\n🔧 Configuración dinámica de años disponible:")
-    # print("   - configurar_anos_comparacion()  # Usar valores por defecto")
-    # print("   - configurar_anos_comparacion(anio_comparacion=2023)  # 2025 vs 2023")
-    # print("   - configurar_anos_comparacion(anio_actual=2024, anio_comparacion=2022)  # 2024 vs 2022")
-    # print("\nGenerando reporte comparativo completo...")
-    # print(f"- Datos {ANIO_ACTUAL}: Reales de la base de datos (compatible con Power BI)")
-    # print(f"- Datos {ANIO_COMPARACION}: Datos reales disponibles para comparación")
-    # print("- Tabla integrada con: nro_semana, ventas_actuales, ventas_año_anterior, diferencia, diferencia_porcentual")
-    # generar_reporte_comparativo_con_tabla(RESTAURANTE_OBJETIVO)
-    
+  
     # generar reporte de todos los locatarios
     for locatario in locatarios_map:
         print(f"\nGenerando reporte para: {locatario}")

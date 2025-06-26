@@ -55,9 +55,9 @@ credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCO
 bigquery_client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 # === CONFIGURACIÓN DE AÑOS ===
-ANIO_ACTUAL = 2025
-ANIO_COMPARACION = 2024
-MES_ACTUAL = 6  # Junio - mes hasta el cual comparar
+ANIO_ACTUAL = datetime.now().year
+ANIO_COMPARACION = ANIO_ACTUAL - 1  
+MES_ACTUAL = datetime.now().month
 
 
 def visualizar_tabla_flujo_de_personas():
@@ -97,12 +97,12 @@ def obtener_datos_flujo_mensual(anio):
     df = bigquery_client.query(query).to_dataframe()
     
     if not df.empty:
-        print(f"✅ Datos de flujo obtenidos para {anio}: {len(df)} meses")
+        print(f"Datos de flujo obtenidos para {anio}: {len(df)} meses")
         for _, row in df.iterrows():
             mes_nombre = month_map[int(row['mes'])]
             print(f"   {mes_nombre}: {row['total_entradas']:,} entradas | {row['total_salidas']:,} salidas | {row['dias_con_datos']} días")
     else:
-        print(f"❌ No se encontraron datos de flujo para {anio}")
+        print(f" No se encontraron datos de flujo para {anio}")
     
     return df
 
@@ -274,8 +274,8 @@ def crear_grafico_comparativo_flujo(tabla_flujo):
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.close(fig)
     
-    print(f"\n✅ Gráfico de flujo guardado como: {filename}")
-    print(f"\n📊 RESUMEN DE FLUJO DE PERSONAS:")
+    print(f"\nGráfico de flujo guardado como: {filename}")
+    print(f"\nRESUMEN DE FLUJO DE PERSONAS:")
     print(f"   - Total entradas {ANIO_ACTUAL}: {total_actual:,}")
     print(f"   - Total entradas {ANIO_COMPARACION}: {total_anterior:,}")
     print(f"   - Diferencia: {diferencia_total:+,} ({porcentaje_total:+.1f}%)")
@@ -290,14 +290,14 @@ def generar_reporte_flujo_personas():
     print(f"Período: Enero - {month_map[MES_ACTUAL]}")
     
     # Obtener datos de ambos años
-    print(f"\n📊 Obteniendo datos de flujo para {ANIO_ACTUAL}...")
+    print(f"\nObteniendo datos de flujo para {ANIO_ACTUAL}...")
     df_actual = obtener_datos_flujo_mensual(ANIO_ACTUAL)
     
-    print(f"📊 Obteniendo datos de flujo para {ANIO_COMPARACION}...")
+    print(f"Obteniendo datos de flujo para {ANIO_COMPARACION}...")
     df_anterior = obtener_datos_flujo_mensual(ANIO_COMPARACION)
     
     if df_actual.empty and df_anterior.empty:
-        print(f"❌ No se encontraron datos de flujo para ninguno de los años")
+        print(f" No se encontraron datos de flujo para ninguno de los años")
         return None
     
     # Crear tabla comparativa
@@ -311,7 +311,7 @@ def generar_reporte_flujo_personas():
     # Crear gráfico
     crear_grafico_comparativo_flujo(tabla_flujo)
     
-    print(f"\n✅ Reporte de flujo de personas completado")
+    print(f"\nReporte de flujo de personas completado")
     
     return tabla_flujo
 
@@ -321,22 +321,12 @@ if __name__ == "__main__":
     print("=== GENERADOR DE REPORTES DE FLUJO DE PERSONAS ===")
     print(f"Análisis comparativo: {ANIO_ACTUAL} vs {ANIO_COMPARACION}")
     print(f"Período: Enero - {month_map[MES_ACTUAL]}")
-    
-    # print("\n" + "="*60)
-    # print("1. VISUALIZACIÓN DE DATOS DE MUESTRA:")
-    # print("="*60)
-    
-    # Visualizar muestra de la tabla
+  
     visualizar_tabla_flujo_de_personas()
-    
-    # print("\n" + "="*60)
-    # print("2. GENERANDO REPORTE COMPARATIVO:")
-    # print("="*60)
-    
+  
     # Generar reporte completo
     generar_reporte_flujo_personas()
     
     print("\n" + "="*60)
-    print("✅ ANÁLISIS FINALIZADO")
-    # print("📁 Revisa la carpeta 'reportes2' para ver el gráfico generado")
-    # print("="*60)
+    print("ANÁLISIS FINALIZADO")
+ 

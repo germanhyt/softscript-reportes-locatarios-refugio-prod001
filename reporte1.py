@@ -52,12 +52,15 @@ TABLE_NEGOCIOS_ID = 'Negocios'
 # FECHA_INICIO = '2025-06-09'
 # FECHA_FIN = '2025-06-15'
  
- # FECHA_FIN es el último día de la semana (domingo) y FECHA_INICIO es el primer día de la semana (lunes), cálculo automático
-FECHA_FIN = datetime.today().date()
+# FECHA_FIN es el último día de la semana (domingo) y FECHA_INICIO es el primer día de la semana (lunes), cálculo automático
+hoy = datetime.today()
+FECHA_FIN = hoy - timedelta(days=(hoy.weekday() - 6) % 7)
 FECHA_INICIO = FECHA_FIN - timedelta(days=6)
-
+FECHA_FIN = FECHA_FIN.strftime('%Y-%m-%d')
+FECHA_INICIO = FECHA_INICIO.strftime('%Y-%m-%d')
 
 LOCATARIO_EXCLUIDO = 'Bar Refugio'
+
 
 # BigQuery client
 credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
