@@ -10,16 +10,54 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# map de meses en inglés a español
+month_map = {
+    1: 'Enero',
+    2: 'Febrero',   
+    3: 'Marzo',
+    4: 'Abril',
+    5: 'Mayo',
+    6: 'Junio',
+    7: 'Julio',
+    8: 'Agosto',
+    9: 'Septiembre',
+    10: 'Octubre',
+    11: 'Noviembre',
+    12: 'Diciembre'
+}
+
+
 # BigQuery Configuration
 PROJECT_ID = 'neat-chain-450900-a1'
 DATASET_VENTAS_ID = 'Ventas'
+
+# LOCAL PATH FOR SERVICE ACCOUNT FILE
 SERVICE_ACCOUNT_FILE = r'C:\Users\gcbso\Downloads\EMPRESA GCB\REFUGIO PROYECTO PYTHON LOCAL\neat-chain-450900-a1-f67bb083925b.json'
+# N8N PATH FOR SERVICE ACCOUNT FILE
+# SERVICE_ACCOUNT_FILE = '/data/scripts/neat-chain-450900-a1-f67bb083925b.json'
+
+# LOCAL PATH SAVE REPORTS
+OUTPUT_FOLDER = 'reportes'
+# N8N PATH SAVE REPORTS
+# OUTPUT_FOLDER = '/data/scripts/reportes'
 
 TABLE_VENTAS_ID = 'sales_df'
 TABLE_CATEGORIAS_ID = 'categorias'
 TABLE_METAS_ID = 'MontosMeta'
 TABLE_NEGOCIOS_ID = 'Negocios'
 
+# Definir intervalo semanal manualmente
+# FECHA_FIN = datetime.today().date()  
+# FECHA_INICIO = FECHA_FIN - timedelta(days=6) 
+# FECHA_INICIO = '2025-06-09'
+# FECHA_FIN = '2025-06-15'
+ 
+ # FECHA_FIN es el último día de la semana (domingo) y FECHA_INICIO es el primer día de la semana (lunes), cálculo automático
+FECHA_FIN = datetime.today().date()
+FECHA_INICIO = FECHA_FIN - timedelta(days=6)
+
+
+LOCATARIO_EXCLUIDO = 'Bar Refugio'
 
 # BigQuery client
 credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
@@ -38,7 +76,6 @@ def visualizar_tabla_sales_df():
 
 
 def obtener_ventas_semanales():
-    """Obtiene las ventas totales de la última semana por restaurante (Descripcion) desde BigQuery."""
     query = f"""
         SELECT 
             n.Descripcion AS nombre_restaurante,
@@ -46,20 +83,19 @@ def obtener_ventas_semanales():
         FROM `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_VENTAS_ID}` s
         JOIN `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_NEGOCIOS_ID}` n
             ON s.CodigoNegocio = n.CodigoNegocio
-        WHERE DATE(s.Fecha) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
+        WHERE DATE(s.Fecha) BETWEEN DATE('{FECHA_INICIO}') AND DATE('{FECHA_FIN}')
+             AND Estado = '0.0'
         GROUP BY nombre_restaurante
     """
     df = bigquery_client.query(query).to_dataframe()
     return df
 
 def calcular_ranking(df):
-    """Agrega columna de ranking (1=mayor venta) y ordena el DataFrame."""
     df = df.sort_values('total_ventas', ascending=False).reset_index(drop=True)
     df['ranking'] = df.index + 1
     return df
 
 def graficar_ranking(df, restaurante, output_folder='reportes'):
-    """Genera y guarda un gráfico de barras horizontal solo con nombres y posiciones."""
    
     os.makedirs(output_folder, exist_ok=True)
     # Solo nombres y posiciones
@@ -81,15 +117,11 @@ def graficar_ranking(df, restaurante, output_folder='reportes'):
     plt.savefig(f"{output_folder}/ranking_{restaurante}.png")
     plt.close()
  
-def generar_reportes_semanales():
-    df_ventas = obtener_ventas_semanales()
-    df_ranking = calcular_ranking(df_ventas)
-    for restaurante in df_ranking['nombre_restaurante']:
-        graficar_ranking(df_ranking, restaurante)
-    print('Reportes generados en la carpeta "reportes".')
-
 def generar_reporte_ranking_global():
     df_ventas = obtener_ventas_semanales()
+    
+    df_ventas = df_ventas[df_ventas['nombre_restaurante'] != LOCATARIO_EXCLUIDO]
+    
     df_ranking = calcular_ranking(df_ventas)
     # Gráfico de barras horizontal descendente, el mayor primero
     plt.figure(figsize=(10, max(4, len(df_ranking)*0.5)))
@@ -97,20 +129,35 @@ def generar_reporte_ranking_global():
     ax = sns.barplot(
         x='total_ventas', y='nombre_restaurante', data=df_ranking,
         order=df_ranking.sort_values('total_ventas', ascending=False)['nombre_restaurante'],
-        palette='Blues_d', legend=False
+        hue='nombre_restaurante',
+        palette='Blues_d', 
+        legend=False
     )
-    plt.title('Ranking Global de Ventas Semanal', fontsize=16, weight='bold')
-    plt.xlabel('Total Ventas (oculto)')
-    plt.ylabel('Restaurante')
+    
+    day_inicio = datetime.strptime(FECHA_INICIO, '%Y-%m-%d').strftime('%d')
+    day_fin = datetime.strptime(FECHA_FIN, '%Y-%m-%d').strftime('%d')
+    month_inicio = month_map[datetime.strptime(FECHA_INICIO, '%Y-%m-%d').month]
+    month_fin = month_map[datetime.strptime(FECHA_FIN, '%Y-%m-%d').month]    
+    subititle = ''
+    if month_inicio == month_fin:
+        subititle = f"Del {day_inicio} al {day_fin} de {month_inicio} de 2025"
+    else:
+        subititle = f"Del {day_inicio} de {month_inicio} al {day_fin} de {month_fin} de 2025" 
+    plt.title('Ranking Global de Ventas Semanal'
+                f"\n{subititle}", fontsize=16, weight='bold')
+    
+    plt.xlabel('Puesto en el raking en base al Total de Ventas')
+    plt.ylabel('Locatarios')
     # Mostrar solo la posición, no el valor
     for i, (ventas, name) in enumerate(zip(df_ranking['total_ventas'], df_ranking['nombre_restaurante'])):
         ax.text(ventas, i, f"#{i+1}", va='center', ha='left', fontsize=10, color='black')
     ax.set_xticks([])  # Oculta los valores del eje x
     plt.tight_layout()
-    os.makedirs('reportes', exist_ok=True)
-    plt.savefig('reportes/ranking_global_semanal.png')
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    plt.savefig(f"{OUTPUT_FOLDER}/ranking_global_semanal.png")
     plt.close()
-    print('Reporte global generado en reportes/ranking_global_semanal.png')
+    print('Reporte global generado en ', OUTPUT_FOLDER)
+
 
 if __name__ == "__main__":
     #visualizar_tabla_sales_df()
