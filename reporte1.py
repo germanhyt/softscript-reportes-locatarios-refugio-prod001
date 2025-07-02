@@ -53,14 +53,21 @@ TABLE_NEGOCIOS_ID = 'Negocios'
 # FECHA_FIN = '2025-06-15'
  
 # FECHA_FIN es el último día de la semana (domingo) y FECHA_INICIO es el primer día de la semana (lunes), cálculo automático
+# hoy = datetime.today()
+# FECHA_FIN = hoy - timedelta(days=(hoy.weekday() - 6) % 7)
+# FECHA_INICIO = FECHA_FIN - timedelta(days=6)
+# FECHA_FIN = FECHA_FIN.strftime('%Y-%m-%d')
+# FECHA_INICIO = FECHA_INICIO.strftime('%Y-%m-%d')
+
 hoy = datetime.today()
-FECHA_FIN = hoy - timedelta(days=(hoy.weekday() - 6) % 7)
-FECHA_INICIO = FECHA_FIN - timedelta(days=6)
-FECHA_FIN = FECHA_FIN.strftime('%Y-%m-%d')
-FECHA_INICIO = FECHA_INICIO.strftime('%Y-%m-%d')
+primer_dia_mes_actual = hoy.replace(day=1)
+ultimo_dia_mes_anterior = primer_dia_mes_actual - timedelta(days=1)
+primer_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
+FECHA_INICIO = primer_dia_mes_anterior.strftime('%Y-%m-%d')
+FECHA_FIN = ultimo_dia_mes_anterior.strftime('%Y-%m-%d')
+
 
 LOCATARIO_EXCLUIDO = 'Bar Refugio'
-
 
 # BigQuery client
 credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
@@ -143,10 +150,10 @@ def generar_reporte_ranking_global():
     month_fin = month_map[datetime.strptime(FECHA_FIN, '%Y-%m-%d').month]    
     subititle = ''
     if month_inicio == month_fin:
-        subititle = f"Del {day_inicio} al {day_fin} de {month_inicio} de 2025"
+        subititle = f"Del {day_inicio} al {day_fin} de {month_inicio} de {datetime.strptime(FECHA_INICIO, '%Y-%m-%d').year}"
     else:
-        subititle = f"Del {day_inicio} de {month_inicio} al {day_fin} de {month_fin} de 2025" 
-    plt.title('Ranking Global de Ventas Semanal'
+        subititle = f"Del {day_inicio} de {month_inicio} al {day_fin} de {month_fin} de {datetime.strptime(FECHA_INICIO, '%Y-%m-%d').year}" 
+    plt.title('Ranking Global de Ventas Mensual de Locatarios' +
                 f"\n{subititle}", fontsize=16, weight='bold')
     
     plt.xlabel('Puesto en el raking en base al Total de Ventas')
@@ -157,7 +164,7 @@ def generar_reporte_ranking_global():
     ax.set_xticks([])  # Oculta los valores del eje x
     plt.tight_layout()
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    plt.savefig(f"{OUTPUT_FOLDER}/ranking_global_semanal.png")
+    plt.savefig(f"{OUTPUT_FOLDER}/ranking_global_mensual.png")
     plt.close()
     print('Reporte global generado en ', OUTPUT_FOLDER)
 

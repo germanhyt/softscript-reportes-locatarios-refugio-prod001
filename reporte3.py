@@ -287,10 +287,10 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     porcentaje_total = (diferencia_total / total_comparacion * 100) if total_comparacion != 0 else 0
     
     # Texto de estadísticas en el gráfico
-    stats_text = f"Total {ANIO_ACTUAL}: S/ {total_actual:,.0f} | Total {ANIO_COMPARACION}: S/ {total_comparacion:,.0f} | Diferencia: {porcentaje_total:+.1f}%"
-    ax_main.text(0.5, 0.95, stats_text, transform=ax_main.transAxes, 
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.8),
-                fontsize=12, fontweight='bold', ha='center')
+    # stats_text = f"Total {ANIO_ACTUAL}: S/ {total_actual:,.0f} | Total {ANIO_COMPARACION}: S/ {total_comparacion:,.0f} | Diferencia: {porcentaje_total:+.1f}%"
+    # ax_main.text(0.5, 0.95, stats_text, transform=ax_main.transAxes, 
+    #             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.8),
+    #             fontsize=12, fontweight='bold', ha='center')
       # === TABLA DE DATOS ===
     ax_table = fig.add_subplot(gs[1])
     ax_table.axis('off')
@@ -354,7 +354,7 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     fig.suptitle(f'Reporte Comparativo Completo - {restaurante}\n'
                  f'Total {ANIO_ACTUAL}: S/ {total_actual:,.0f} | Total {ANIO_COMPARACION}: S/ {total_comparacion:,.0f} | '
                  f'Diferencia: {porcentaje_total:+.1f}%', 
-                 fontsize=16, fontweight='bold', y=0.98)
+                 fontsize=16, fontweight='bold', y=0.96)
     
     # Guardar archivos
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
