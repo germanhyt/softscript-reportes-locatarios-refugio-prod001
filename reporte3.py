@@ -101,11 +101,6 @@ def configurar_anos_comparacion(anio_actual=None, anio_comparacion=None):
     Args:
         anio_actual: Año principal para el análisis (por defecto 2025)
         anio_comparacion: Año para comparar (por defecto se calcula automáticamente como año_actual - 1)
-    
-    Ejemplos de uso:
-        configurar_anos_comparacion()  # Usa defaults: 2025 vs 2024
-        configurar_anos_comparacion(anio_comparacion=2023)  # 2025 vs 2023
-        configurar_anos_comparacion(anio_actual=2024, anio_comparacion=2022)  # 2024 vs 2022
     """
     global ANIO_ACTUAL, ANIO_COMPARACION
     
@@ -380,51 +375,15 @@ def generar_reporte_comparativo_con_tabla(restaurante):
 
 
 def buscar_datos_reales_anio_comparacion_todos_restaurantes():
-    """Busca datos reales del año de comparación en todos los restaurantes para usar como referencia"""
-    query = f'''
-        WITH ventas_comparacion AS (
-            SELECT
-                n.Descripcion AS nombre_restaurante,
-                EXTRACT(YEAR FROM DATE(s.FechaIntegrada)) AS anio,
-                -- Calcular semana compatible con Power BI WEEKNUM(fecha,11)
-                CASE 
-                    WHEN EXTRACT(YEAR FROM DATE(s.FechaIntegrada)) = {ANIO_COMPARACION} THEN
-                        FLOOR((DATE_DIFF(DATE(s.FechaIntegrada), DATE('{ANIO_COMPARACION}-01-01'), DAY) + 
-                               EXTRACT(DAYOFWEEK FROM DATE('{ANIO_COMPARACION}-01-01')) - 2) / 7) + 1
-                    ELSE 1
-                END AS semana_powerbi,
-                DATE(s.FechaIntegrada) AS fecha,
-                CAST(s.Monto AS FLOAT64) AS monto
-            FROM `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_VENTAS_ID}` s
-            JOIN `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_NEGOCIOS_ID}` n
-                ON s.CodigoNegocio = n.CodigoNegocio
-            WHERE Estado = '0.0'
-                AND EXTRACT(YEAR FROM DATE(s.FechaIntegrada)) = {ANIO_COMPARACION}
-                AND DATE(s.FechaIntegrada) >= '{ANIO_COMPARACION}-01-01'
-                AND DATE(s.FechaIntegrada) <= '{ANIO_COMPARACION}-12-31'
-                AND s.Monto IS NOT NULL
-                AND CAST(s.Monto AS FLOAT64) > 0
-        )
-        SELECT 
-            nombre_restaurante,
-            semana_powerbi as semana,
-            COUNT(*) as num_transacciones,
-            SUM(monto) AS total_ventas,
-            MIN(fecha) as fecha_inicio_semana,
-            MAX(fecha) as fecha_fin_semana
-        FROM ventas_comparacion
-        WHERE semana_powerbi BETWEEN 1 AND 53
-        GROUP BY nombre_restaurante, semana_powerbi
-        HAVING SUM(monto) > 0
-        ORDER BY nombre_restaurante, semana_powerbi
-    '''
-    df = bigquery_client.query(query).to_dataframe()
-    return df
+    """FUNCIÓN DESHABILITADA - Ya no usar datos de otros restaurantes como referencia"""
+    # Esta función ya no se usa para evitar comparaciones incorrectas
+    # Cada restaurante debe compararse solo con sus propios datos históricos
+    pass
 
 def obtener_datos_anio_comparacion_real(restaurante_objetivo):
-    """Obtiene datos reales del año de comparación del restaurante objetivo o de restaurantes similares"""
+    """Obtiene datos reales del año de comparación del restaurante objetivo solamente"""
     
-    # Primero intentar obtener datos del restaurante objetivo
+    # Intentar obtener datos del restaurante objetivo únicamente
     query_objetivo = f'''
         WITH ventas_comparacion AS (
             SELECT
@@ -461,34 +420,20 @@ def obtener_datos_anio_comparacion_real(restaurante_objetivo):
     df_objetivo = bigquery_client.query(query_objetivo).to_dataframe()
     
     if not df_objetivo.empty:
-        print(f"Encontrados datos reales del {ANIO_COMPARACION} para {restaurante_objetivo}: {len(df_objetivo)} semanas")
+        print(f"✅ Encontrados datos reales del {ANIO_COMPARACION} para {restaurante_objetivo}: {len(df_objetivo)} semanas")
         return df_objetivo
-    
-    # Si no hay datos del restaurante objetivo, buscar datos de otros restaurantes como referencia
-    print(f"No se encontraron datos del {ANIO_COMPARACION} para {restaurante_objetivo}")
-    print(f"Buscando datos del {ANIO_COMPARACION} en otros restaurantes como referencia...")
-    
-    df_todos = buscar_datos_reales_anio_comparacion_todos_restaurantes()
-    
-    if not df_todos.empty:
-        # Usar el restaurante con más datos del año de comparación
-        restaurante_con_mas_datos = df_todos.groupby('nombre_restaurante')['total_ventas'].sum().idxmax()
-        df_referencia = df_todos[df_todos['nombre_restaurante'] == restaurante_con_mas_datos].copy()
-        df_referencia = df_referencia[['semana', 'total_ventas', 'num_transacciones']].copy()
-        df_referencia['anio'] = ANIO_COMPARACION
-        
-        print(f"Usando datos del {ANIO_COMPARACION} de '{restaurante_con_mas_datos}' como referencia: {len(df_referencia)} semanas")
-        return df_referencia
-    
-    print(f" No se encontraron datos del {ANIO_COMPARACION} en ningún restaurante")
-    return pd.DataFrame()    
+    else:
+        print(f"⚠️  No se encontraron datos del {ANIO_COMPARACION} para {restaurante_objetivo} - usando ceros para comparación justa")
+        # Retornar DataFrame vacío para que se usen ceros en la comparación
+        return pd.DataFrame()    
 if __name__ == "__main__":
   
     # generar reporte de todos los locatarios
+    # generar_reporte_comparativo_con_tabla('Bodega Turca')
     for locatario in locatarios_map:
         print(f"\nGenerando reporte para: {locatario}")
         generar_reporte_comparativo_con_tabla(locatario)
         
     print("\n Todos los reportes fueron generados exitosamente.")
-    
+
 

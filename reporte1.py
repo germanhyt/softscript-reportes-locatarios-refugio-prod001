@@ -100,6 +100,21 @@ def obtener_ventas_semanales():
     df = bigquery_client.query(query).to_dataframe()
     return df
 
+def obtener_total_ventas_periodo():
+    """Función para obtener el total de ventas del período especificado"""
+    query = f"""
+        SELECT 
+            SUM(CAST(s.Monto AS FLOAT64)) AS total_ventas_periodo
+        FROM `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_VENTAS_ID}` s
+        JOIN `{PROJECT_ID}.{DATASET_VENTAS_ID}.{TABLE_NEGOCIOS_ID}` n
+            ON s.CodigoNegocio = n.CodigoNegocio
+        WHERE DATE(s.Fecha) BETWEEN DATE('{FECHA_INICIO}') AND DATE('{FECHA_FIN}')
+             AND Estado = '0.0'
+    """
+            #  AND n.Descripcion != '{LOCATARIO_EXCLUIDO}'
+    df = bigquery_client.query(query).to_dataframe()
+    return df['total_ventas_periodo'].iloc[0] if not df.empty else 0
+
 def calcular_ranking(df):
     df = df.sort_values('total_ventas', ascending=False).reset_index(drop=True)
     df['ranking'] = df.index + 1
@@ -133,6 +148,10 @@ def generar_reporte_ranking_global():
     df_ventas = df_ventas[df_ventas['nombre_restaurante'] != LOCATARIO_EXCLUIDO]
     
     df_ranking = calcular_ranking(df_ventas)
+    
+    
+    # Obtener total de ventas del período
+    total_ventas_periodo = obtener_total_ventas_periodo()
     # Gráfico de barras horizontal descendente, el mayor primero
     plt.figure(figsize=(10, max(4, len(df_ranking)*0.5)))
     sns.set_style('whitegrid')
@@ -154,7 +173,7 @@ def generar_reporte_ranking_global():
     else:
         subititle = f"Del {day_inicio} de {month_inicio} al {day_fin} de {month_fin} de {datetime.strptime(FECHA_INICIO, '%Y-%m-%d').year}" 
     plt.title('Ranking Global de Ventas Mensual de Locatarios' +
-                f"\n{subititle}", fontsize=16, weight='bold')
+                f"\n{subititle}", fontsize=16, weight='bold', pad=20)
     
     plt.xlabel('Puesto en el raking en base al Total de Ventas')
     plt.ylabel('Locatarios')
@@ -162,6 +181,19 @@ def generar_reporte_ranking_global():
     for i, (ventas, name) in enumerate(zip(df_ranking['total_ventas'], df_ranking['nombre_restaurante'])):
         ax.text(ventas, i, f"#{i+1}", va='center', ha='left', fontsize=10, color='black')
     ax.set_xticks([])  # Oculta los valores del eje x
+    
+    # Agregar label con total de ventas en la parte inferior derecha
+    # plt.text(0.98, 0.02, f'Total de Ventas: S/ {total_ventas_periodo:,.0f}', 
+    #          transform=ax.transAxes, fontsize=20, fontweight='bold',
+    #          horizontalalignment='right', verticalalignment='bottom',
+    #          bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
+    plt.text(0.94, 0.04, f'Total Ventas:\nS/ {total_ventas_periodo:,.0f}', 
+         transform=ax.transAxes, fontsize=18, fontweight='bold',
+         horizontalalignment='right', verticalalignment='bottom',
+         bbox=dict(boxstyle='round,pad=0.8', facecolor='lightblue', alpha=0.8),
+         linespacing=1.5)
+    
+    
     plt.tight_layout()
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     plt.savefig(f"{OUTPUT_FOLDER}/ranking_global_mensual.png")

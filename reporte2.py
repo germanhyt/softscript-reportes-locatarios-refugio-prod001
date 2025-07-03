@@ -57,7 +57,16 @@ bigquery_client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
 # === CONFIGURACIÓN DE AÑOS ===
 ANIO_ACTUAL = datetime.now().year
 ANIO_COMPARACION = ANIO_ACTUAL - 1  
-MES_ACTUAL = datetime.now().month
+
+MES_ACTUAL = datetime.today().month 
+hoy = datetime.now()
+if hoy.day > 28:
+    MES_ACTUAL = hoy.month
+else:
+    if hoy.month == 1:
+        MES_ACTUAL = 12
+    else:
+        MES_ACTUAL = hoy.month - 1
 
 
 def visualizar_tabla_flujo_de_personas():
@@ -108,7 +117,6 @@ def obtener_datos_flujo_mensual(anio):
 
 
 def crear_tabla_comparativa_flujo(df_actual, df_anterior):
-    """Crea tabla comparativa de entradas mensuales"""
     
     # Solo mostrar hasta el mes actual
     mes_limite = MES_ACTUAL
@@ -287,7 +295,15 @@ def generar_reporte_flujo_personas():
     """Función principal para generar el reporte de flujo de personas"""
     print(f"\n=== ANÁLISIS DE FLUJO DE PERSONAS ===")
     print(f"Comparando: {ANIO_ACTUAL} vs {ANIO_COMPARACION}")
-    print(f"Período: Enero - {month_map[MES_ACTUAL]}")
+    
+    # Mostrar la lógica aplicada
+    hoy = datetime.now()
+    if hoy.day > 28:
+        print(f"Período: Enero - {month_map[MES_ACTUAL]} (incluye mes actual - día {hoy.day} > 28)")
+    else:
+        print(f"Período: Enero - {month_map[MES_ACTUAL]} (mes anterior completo - día {hoy.day} ≤ 28)")
+    
+    print(f"📅 Configuración: Analizando {MES_ACTUAL} meses con datos completos")
     
     # Obtener datos de ambos años
     print(f"\nObteniendo datos de flujo para {ANIO_ACTUAL}...")
@@ -320,7 +336,13 @@ def generar_reporte_flujo_personas():
 if __name__ == "__main__":
     print("=== GENERADOR DE REPORTES DE FLUJO DE PERSONAS ===")
     print(f"Análisis comparativo: {ANIO_ACTUAL} vs {ANIO_COMPARACION}")
-    print(f"Período: Enero - {month_map[MES_ACTUAL]}")
+    print(f"Fecha actual: {datetime.now().strftime('%d/%m/%Y')} (día {datetime.now().day})")
+    
+    # Explicar la lógica aplicada
+    if datetime.now().day > 28:
+        print(f"Período: Enero - {month_map[MES_ACTUAL]} (mes actual incluido - día > 28)")
+    else:
+        print(f"Período: Enero - {month_map[MES_ACTUAL]} (mes anterior completo - día ≤ 28)")
   
     visualizar_tabla_flujo_de_personas()
   

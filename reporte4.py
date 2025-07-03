@@ -77,7 +77,8 @@ credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCO
 bigquery_client = bigquery.Client(project=PROJECT_ID, credentials=credentials)
 
 # === CONFIGURACIÓN MENSUAL ===
-MES_ACTUAL = datetime.today().month
+# MES_ACTUAL = datetime.today().month
+MES_ACTUAL =  datetime.today().month if datetime.today().day > 28 else (datetime.today().month - 1 if datetime.today().month > 1 else 12) 
 ANIO_ACTUAL_MENSUAL = datetime.today().year
 ANIO_COMPARACION_MENSUAL = ANIO_ACTUAL_MENSUAL - 1
 
@@ -312,7 +313,7 @@ def crear_tablas_comparativas_anuales(df_actual, df_anterior):
 
 
 def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante):
-    """Crea gráficos comparativos anuales con tablas integradas"""
+
     import matplotlib.pyplot as plt
     import os
     
@@ -321,8 +322,8 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
     meses_num = list(range(1, mes_limite + 1))
     nombres_meses_cortos = [m[:3] for m in tabla_ventas['Mes'][:mes_limite]]
     
-    fig = plt.figure(figsize=(20, 16))
-    gs = fig.add_gridspec(4, 1, height_ratios=[1, 1, 0.6, 0.6], hspace=0.4)
+    fig = plt.figure(figsize=(18, 20))
+    gs = fig.add_gridspec(4, 1, height_ratios=[2.8, 1, 0.8, 0.8], hspace=0.4)
 
     # Gráfico de ventas - solo hasta mes actual
     ax1 = fig.add_subplot(gs[0])
@@ -335,7 +336,7 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
              label=f'Ventas {ANIO_COMPARACION_MENSUAL}', color='#FF9800', markerfacecolor='white', markeredgewidth=2)
     
     ax1.set_title(f'Evolución de Ventas Mensuales - {restaurante}\n(Enero - {month_map[mes_limite]} {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
-                  fontsize=16, fontweight='bold')
+                  fontsize=16, fontweight='bold', pad = 20)    
     ax1.set_xticks(meses_num)
     ax1.set_xticklabels(nombres_meses_cortos)
     ax1.set_ylabel('Ventas (S/)', fontsize=12)
@@ -355,39 +356,50 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
                         ha='center', fontsize=9, fontweight='bold',
                         color='#2E7D32')
 
-    # Gráfico de ticket promedio - solo hasta mes actual
-    ax2 = fig.add_subplot(gs[1])
-    tickets_actual_limitado = tabla_tickets['Actual_Num'][:mes_limite]
-    tickets_anterior_limitado = tabla_tickets['Anterior_Num'][:mes_limite]
+    # -- Gráfico de ticket promedio - solo hasta mes actual 
+    # ax2 = fig.add_subplot(gs[1])
+    # tickets_actual_limitado = tabla_tickets['Actual_Num'][:mes_limite]
+    # tickets_anterior_limitado = tabla_tickets['Anterior_Num'][:mes_limite]
     
-    ax2.plot(meses_num, tickets_actual_limitado, marker='o', linewidth=3, markersize=8,
-             label=f'Ticket Promedio {ANIO_ACTUAL_MENSUAL}', color='#2196F3', markerfacecolor='white', markeredgewidth=2)
-    ax2.plot(meses_num, tickets_anterior_limitado, marker='s', linewidth=3, markersize=8,
-             label=f'Ticket Promedio {ANIO_COMPARACION_MENSUAL}', color='#9C27B0', markerfacecolor='white', markeredgewidth=2)
+    # ax2.plot(meses_num, tickets_actual_limitado, marker='o', linewidth=3, markersize=8,
+    #          label=f'Ticket Promedio {ANIO_ACTUAL_MENSUAL}', color='#2196F3', markerfacecolor='white', markeredgewidth=2)
+    # ax2.plot(meses_num, tickets_anterior_limitado, marker='s', linewidth=3, markersize=8,
+    #          label=f'Ticket Promedio {ANIO_COMPARACION_MENSUAL}', color='#9C27B0', markerfacecolor='white', markeredgewidth=2)
     
-    ax2.set_title(f'Evolución del Ticket Promedio - {restaurante}\n(Enero - {month_map[mes_limite]} {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
-                  fontsize=16, fontweight='bold')
-    ax2.set_xticks(meses_num)
-    ax2.set_xticklabels(nombres_meses_cortos)
-    ax2.set_ylabel('Ticket Promedio (S/)', fontsize=12)
-    ax2.legend(fontsize=12)
-    ax2.grid(True, alpha=0.3)
+    # ax2.set_title(f'Evolución del Ticket Promedio - {restaurante}\n(Enero - {month_map[mes_limite]} {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
+    #               fontsize=16, fontweight='bold')
+    # ax2.set_xticks(meses_num)
+    # ax2.set_xticklabels(nombres_meses_cortos)
+    # ax2.set_ylabel('Ticket Promedio (S/)', fontsize=12)
+    # ax2.legend(fontsize=12)
+    # ax2.grid(True, alpha=0.3)
     
     # Formatear eje Y
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'S/ {x:.2f}'))
+    # ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'S/ {x:.2f}'))
     
     # Agregar valores en los puntos
-    for i, (mes, valor) in enumerate(zip(meses_num, tickets_actual_limitado)):
-        if valor > 0:
-            ax2.annotate(f'S/ {valor:.2f}', 
-                        (mes, valor), 
-                        textcoords="offset points", 
-                        xytext=(0,10), 
-                        ha='center', fontsize=9, fontweight='bold',
-                        color='#1565C0')
-
+    # for i, (mes, valor) in enumerate(zip(meses_num, tickets_actual_limitado)):
+    #     if valor > 0:
+    #         ax2.annotate(f'S/ {valor:.2f}', 
+    #                     (mes, valor), 
+    #                     textcoords="offset points", 
+    #                     xytext=(0,10), 
+    #                     ha='center', fontsize=9, fontweight='bold',
+    #                     color='#1565C0')
+    
+    # Agregar valores en los puntos V2
+    # for i, (mes, valor) in enumerate(zip(meses_num, tickets_actual_limitado)):
+    #     if valor > 0:
+    #         ax2.annotate(f'S/ {valor:.2f}', 
+    #                     (mes, valor), 
+    #                     textcoords="offset points", 
+    #                     xytext=(0,10), 
+    #                     ha='center', fontsize=9, fontweight='bold',
+    #                     color='#1565C0')
+    
+    
     # Tabla de ventas mejorada - solo hasta mes actual
-    ax3 = fig.add_subplot(gs[2])
+    ax3 = fig.add_subplot(gs[1])
     ax3.axis('off')
     tabla_ventas_limitada = tabla_ventas[:mes_limite]
     tabla_ventas_display = tabla_ventas_limitada[['Mes', 'Actual', 'Año Anterior', 'Diferencia', 'Diferencia %']]
@@ -423,43 +435,43 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
     ax3.set_title('Tabla de Ventas Mensuales (Comparativo)', fontsize=14, fontweight='bold', pad=15)
 
     # Tabla de ticket promedio mejorada - solo hasta mes actual
-    ax4 = fig.add_subplot(gs[3])
-    ax4.axis('off')
-    tabla_tickets_limitada = tabla_tickets[:mes_limite]
-    tabla_tickets_display = tabla_tickets_limitada[['Mes', 'Actual', 'Año Anterior', 'Diferencia', 'Diferencia %']]
+    # ax4 = fig.add_subplot(gs[3])
+    # ax4.axis('off')
+    # tabla_tickets_limitada = tabla_tickets[:mes_limite]
+    # tabla_tickets_display = tabla_tickets_limitada[['Mes', 'Actual', 'Año Anterior', 'Diferencia', 'Diferencia %']]
     
-    table2 = ax4.table(cellText=tabla_tickets_display.values,
-                      colLabels=tabla_tickets_display.columns,
-                      cellLoc='center', loc='center', bbox=[0, 0, 1, 1])
-    table2.auto_set_font_size(False)
-    table2.set_fontsize(10)
-    table2.scale(1, 1.5)
+    # table2 = ax4.table(cellText=tabla_tickets_display.values,
+    #                   colLabels=tabla_tickets_display.columns,
+    #                   cellLoc='center', loc='center', bbox=[0, 0, 1, 1])
+    # table2.auto_set_font_size(False)
+    # table2.set_fontsize(10)
+    # table2.scale(1, 1.5)
     
     # Colorear encabezados
-    for i in range(len(tabla_tickets_display.columns)):
-        table2[(0, i)].set_facecolor('#1976D2')
-        table2[(0, i)].set_text_props(weight='bold', color='white')
+    # for i in range(len(tabla_tickets_display.columns)):
+    #     table2[(0, i)].set_facecolor('#1976D2')
+    #     table2[(0, i)].set_text_props(weight='bold', color='white')
     
     # Colorear celdas según diferencias
-    for i in range(1, len(tabla_tickets_limitada) + 1):
-        for j in range(len(tabla_tickets_display.columns)):
-            if i % 2 == 0:
-                table2[(i, j)].set_facecolor('#f8f9fa')
+    # for i in range(1, len(tabla_tickets_limitada) + 1):
+    #     for j in range(len(tabla_tickets_display.columns)):
+    #         if i % 2 == 0:
+    #             table2[(i, j)].set_facecolor('#f8f9fa')
             
-            # Colorear diferencias porcentuales
-            if j == 4:  # Columna de Diferencia %
-                diff_text = tabla_tickets_display.iloc[i-1]['Diferencia %']
-                if '+' in str(diff_text):
-                    table2[(i, j)].set_facecolor('#e8f5e8')
-                    table2[(i, j)].set_text_props(color='#2e7d32', weight='bold')
-                elif '-' in str(diff_text):
-                    table2[(i, j)].set_facecolor('#ffebee')
-                    table2[(i, j)].set_text_props(color='#d32f2f', weight='bold')
+    #         # Colorear diferencias porcentuales
+    #         if j == 4:  # Columna de Diferencia %
+    #             diff_text = tabla_tickets_display.iloc[i-1]['Diferencia %']
+    #             if '+' in str(diff_text):
+    #                 table2[(i, j)].set_facecolor('#e8f5e8')
+    #                 table2[(i, j)].set_text_props(color='#2e7d32', weight='bold')
+    #             elif '-' in str(diff_text):
+    #                 table2[(i, j)].set_facecolor('#ffebee')
+    #                 table2[(i, j)].set_text_props(color='#d32f2f', weight='bold')
     
-    ax4.set_title('Tabla de Ticket Promedio Mensual (Comparativo)', fontsize=14, fontweight='bold', pad=15)
+    # ax4.set_title('Tabla de Ticket Promedio Mensual (Comparativo)', fontsize=14, fontweight='bold', pad=15)
 
-    plt.suptitle(f'Análisis Anual Comparativo - {restaurante}\n(Período: Enero - {month_map[mes_limite]} | {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
-                 fontsize=18, fontweight='bold', y=0.98)
+    # plt.suptitle(f'Análisis Anual Comparativo - {restaurante}\n(Período: Enero - {month_map[mes_limite]} | {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
+    #              fontsize=18, fontweight='bold', y=0.98)
     
     # filename = f'reportes4/analisis_anual_comparativo_{restaurante.lower().replace(" ", "_")}_{ANIO_ACTUAL_MENSUAL}_vs_{ANIO_COMPARACION_MENSUAL}.png'
     filename = f'{OUTPUT_FOLDER}/analisis_anual_comparativo_{restaurante.lower().replace(" ", "_")}_{ANIO_ACTUAL_MENSUAL}_vs_{ANIO_COMPARACION_MENSUAL}.png'
@@ -519,6 +531,7 @@ def generar_analisis_anual_comparativo(restaurante):
 
 if __name__ == "__main__":
     
+    # generar_analisis_anual_comparativo('Patio Cavenecia')
     for locatario in locatarios_map:
         print(f"\n Iniciando análisis para: {locatario}")
         generar_analisis_anual_comparativo(locatario)
