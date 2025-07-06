@@ -187,11 +187,11 @@ def generar_reporte_ranking_global():
     #          transform=ax.transAxes, fontsize=20, fontweight='bold',
     #          horizontalalignment='right', verticalalignment='bottom',
     #          bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
-    plt.text(0.94, 0.04, f'Total Ventas:\nS/ {total_ventas_periodo:,.0f}', 
-         transform=ax.transAxes, fontsize=18, fontweight='bold',
-         horizontalalignment='right', verticalalignment='bottom',
-         bbox=dict(boxstyle='round,pad=0.8', facecolor='lightblue', alpha=0.8),
-         linespacing=1.5)
+    # plt.text(0.94, 0.04, f'Total Ventas:\nS/ {total_ventas_periodo:,.0f}', 
+    #      transform=ax.transAxes, fontsize=18, fontweight='bold',
+    #      horizontalalignment='right', verticalalignment='bottom',
+    #      bbox=dict(boxstyle='round,pad=0.8', facecolor='lightblue', alpha=0.8),
+    #      linespacing=1.5)
     
     
     plt.tight_layout()

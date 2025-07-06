@@ -51,3 +51,5 @@ const reportes = [
 ];
 
 // return reportes;
+
+export default reportes;

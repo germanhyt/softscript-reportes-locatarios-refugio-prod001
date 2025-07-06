@@ -259,7 +259,7 @@ const reportes = [
             },
         ],
     },
-    {
+    { 
         reporteId: "comparativo_ventas_semanal",
         script: "python3 /data/scripts/reporte3.py",
         imagenPath_destinatarios: [
@@ -522,3 +522,5 @@ const reportes = [
 ];
 
 // export reportes;
+
+export default reportes;
