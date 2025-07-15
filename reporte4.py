@@ -266,25 +266,28 @@ def crear_tablas_comparativas_anuales(df_actual, df_anterior):
         tickets_actuales.append(ticket_actual)
         tickets_anteriores.append(ticket_anterior)
     
-    # Calcular diferencias y porcentajes
-    def calcular_variaciones(actuales, anteriores):
+    # LÓGICA CORREGIDA: Si no hay ventas en año anterior (locatario no existía), diferencia = 0
+    # Este enfoque garantiza una comparación justa para los locatarios que no operaban el año anterior
+    def calcular_variaciones_corregidas(actuales, anteriores):
         diferencias = []
         diferencias_pct = []
         
         for actual, anterior in zip(actuales, anteriores):
-            diferencia = actual - anterior
-            diferencias.append(diferencia)
-            
-            if anterior != 0 and not pd.isna(anterior):
-                pct = (diferencia / anterior) * 100
+            # Si no hay ventas en el año anterior, diferencia = 0
+            if anterior == 0:
+                diferencias.append(0)
+                diferencias_pct.append(0)
             else:
-                pct = 0
-            diferencias_pct.append(pct)
+                # Cálculo normal cuando hay datos del año anterior
+                diferencia = actual - anterior
+                diferencias.append(diferencia)
+                pct = (diferencia / anterior) * 100
+                diferencias_pct.append(pct)
         
         return diferencias, diferencias_pct
     
-    # Tabla de ventas
-    dif_ventas, dif_ventas_pct = calcular_variaciones(ventas_actuales, ventas_anteriores)
+    # Tabla de ventas con lógica corregida
+    dif_ventas, dif_ventas_pct = calcular_variaciones_corregidas(ventas_actuales, ventas_anteriores)
     
     tabla_ventas = pd.DataFrame({
         'Mes': nombres_meses,
@@ -293,11 +296,13 @@ def crear_tablas_comparativas_anuales(df_actual, df_anterior):
         'Diferencia': [f"S/ {d:+,.0f}" for d in dif_ventas],
         'Diferencia %': [f"{p:+.1f}%" for p in dif_ventas_pct],
         'Actual_Num': ventas_actuales,  # Para gráficos
-        'Anterior_Num': ventas_anteriores
+        'Anterior_Num': ventas_anteriores,
+        'Diferencia_Num': dif_ventas,
+        'Diferencia_Pct_Num': dif_ventas_pct
     })
     
-    # Tabla de tickets
-    dif_tickets, dif_tickets_pct = calcular_variaciones(tickets_actuales, tickets_anteriores)
+    # Tabla de tickets con lógica corregida
+    dif_tickets, dif_tickets_pct = calcular_variaciones_corregidas(tickets_actuales, tickets_anteriores)
     
     tabla_tickets = pd.DataFrame({
         'Mes': nombres_meses,
@@ -306,10 +311,23 @@ def crear_tablas_comparativas_anuales(df_actual, df_anterior):
         'Diferencia': [f"S/ {d:+.2f}" for d in dif_tickets],
         'Diferencia %': [f"{p:+.1f}%" for p in dif_tickets_pct],
         'Actual_Num': tickets_actuales,  # Para gráficos
-        'Anterior_Num': tickets_anteriores
+        'Anterior_Num': tickets_anteriores,
+        'Diferencia_Num': dif_tickets,
+        'Diferencia_Pct_Num': dif_tickets_pct
     })
     
-    return tabla_ventas, tabla_tickets
+    # DIAGNÓSTICO: Mostrar meses sin datos del año anterior
+    meses_sin_datos_anteriores = [i+1 for i, v in enumerate(ventas_anteriores) if v == 0]
+    if meses_sin_datos_anteriores:
+        nombres_meses_sin_datos = [month_map[mes] for mes in meses_sin_datos_anteriores]
+        print(f"📋 DIAGNÓSTICO para comparación mensual:")
+        print(f"   - Meses sin ventas en {ANIO_COMPARACION_MENSUAL}: {len(meses_sin_datos_anteriores)} meses")
+        print(f"   - Meses: {', '.join(nombres_meses_sin_datos)}")
+        print(f"   - Diferencias ajustadas a 0 (locatario no existía)")
+    else:
+        print(f"✅ Datos completos en {ANIO_COMPARACION_MENSUAL} para todos los meses analizados")
+    
+    return tabla_ventas, tabla_tickets, meses_sin_datos_anteriores
 
 
 def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante):
@@ -322,8 +340,19 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
     meses_num = list(range(1, mes_limite + 1))
     nombres_meses_cortos = [m[:3] for m in tabla_ventas['Mes'][:mes_limite]]
     
-    fig = plt.figure(figsize=(18, 20))
-    gs = fig.add_gridspec(4, 1, height_ratios=[2.8, 1, 0.8, 0.8], hspace=0.4)
+    # Determinar si hay meses sin datos para mostrar la nota explicativa
+    tiene_meses_sin_datos = any(tabla_ventas['Anterior_Num'][:mes_limite] == 0)
+    
+    # Layout adaptativo según necesidad
+    if tiene_meses_sin_datos:
+        # Con espacio para nota: 55% gráfico, 10% nota, 35% tabla
+        fig = plt.figure(figsize=(22, 18))
+        gs = fig.add_gridspec(3, 1, height_ratios=[1, 0.1, 0.7], hspace=0.15)
+        
+    else:
+        # Sin nota: 70% gráfico, 30% tabla
+        fig = plt.figure(figsize=(22, 18))
+        gs = fig.add_gridspec(2, 1, height_ratios=[1, 0.7], hspace=0.15)
 
     # Gráfico de ventas - solo hasta mes actual
     ax1 = fig.add_subplot(gs[0])
@@ -339,6 +368,7 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
                   fontsize=16, fontweight='bold', pad = 20)    
     ax1.set_xticks(meses_num)
     ax1.set_xticklabels(nombres_meses_cortos)
+    ax1.set_xlabel('Meses del año', fontsize=12)
     ax1.set_ylabel('Ventas (S/)', fontsize=12)
     ax1.legend(fontsize=12)
     ax1.grid(True, alpha=0.3)
@@ -356,60 +386,48 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
                         ha='center', fontsize=9, fontweight='bold',
                         color='#2E7D32')
 
-    # -- Gráfico de ticket promedio - solo hasta mes actual 
-    # ax2 = fig.add_subplot(gs[1])
-    # tickets_actual_limitado = tabla_tickets['Actual_Num'][:mes_limite]
-    # tickets_anterior_limitado = tabla_tickets['Anterior_Num'][:mes_limite]
-    
-    # ax2.plot(meses_num, tickets_actual_limitado, marker='o', linewidth=3, markersize=8,
-    #          label=f'Ticket Promedio {ANIO_ACTUAL_MENSUAL}', color='#2196F3', markerfacecolor='white', markeredgewidth=2)
-    # ax2.plot(meses_num, tickets_anterior_limitado, marker='s', linewidth=3, markersize=8,
-    #          label=f'Ticket Promedio {ANIO_COMPARACION_MENSUAL}', color='#9C27B0', markerfacecolor='white', markeredgewidth=2)
-    
-    # ax2.set_title(f'Evolución del Ticket Promedio - {restaurante}\n(Enero - {month_map[mes_limite]} {ANIO_ACTUAL_MENSUAL} vs {ANIO_COMPARACION_MENSUAL})', 
-    #               fontsize=16, fontweight='bold')
-    # ax2.set_xticks(meses_num)
-    # ax2.set_xticklabels(nombres_meses_cortos)
-    # ax2.set_ylabel('Ticket Promedio (S/)', fontsize=12)
-    # ax2.legend(fontsize=12)
-    # ax2.grid(True, alpha=0.3)
-    
-    # Formatear eje Y
-    # ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'S/ {x:.2f}'))
-    
-    # Agregar valores en los puntos
-    # for i, (mes, valor) in enumerate(zip(meses_num, tickets_actual_limitado)):
-    #     if valor > 0:
-    #         ax2.annotate(f'S/ {valor:.2f}', 
-    #                     (mes, valor), 
-    #                     textcoords="offset points", 
-    #                     xytext=(0,10), 
-    #                     ha='center', fontsize=9, fontweight='bold',
-    #                     color='#1565C0')
-    
-    # Agregar valores en los puntos V2
-    # for i, (mes, valor) in enumerate(zip(meses_num, tickets_actual_limitado)):
-    #     if valor > 0:
-    #         ax2.annotate(f'S/ {valor:.2f}', 
-    #                     (mes, valor), 
-    #                     textcoords="offset points", 
-    #                     xytext=(0,10), 
-    #                     ha='center', fontsize=9, fontweight='bold',
-    #                     color='#1565C0')
-    
-    
+
+
+    # === NOTA EXPLICATIVA ENTRE GRÁFICO Y TABLA ===
+    # Crear área para la nota si hay meses sin datos
+    if tiene_meses_sin_datos:
+        # Agregar la nota explicativa
+        ax_nota = fig.add_subplot(gs[1])
+        ax_nota.axis('off')  # Sin ejes para la nota
+        
+        # Crear el texto de la nota
+        meses_sin_datos_anteriores = [i+1 for i, v in enumerate(tabla_ventas['Anterior_Num'][:mes_limite]) if v == 0]
+        nombres_meses_sin_datos = [month_map[mes] for mes in meses_sin_datos_anteriores]
+        meses_sin_datos_count = len(meses_sin_datos_anteriores)
+        
+        nota_texto = (f"NOTA IMPORTANTE: {restaurante} presenta {meses_sin_datos_count} meses con diferencias = 0 "
+                     f"debido a que no tuvo operaciones durante esas fechas.")
+        
+        # Mostrar la nota con buen formato
+        ax_nota.text(0.5, 0.0, nota_texto, transform=ax_nota.transAxes,
+                    fontsize=12, fontweight='bold', ha='center', va='center',
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="lightyellow", 
+                              alpha=0.95, edgecolor='orange', linewidth=1),
+                    wrap=True)
+        
+        # Configurar el subplot para la tabla
+        ax_tabla = fig.add_subplot(gs[2])
+    else:
+        # Si no hay meses sin datos, usar el layout original
+        ax_tabla = fig.add_subplot(gs[1])
+
     # Tabla de ventas mejorada - solo hasta mes actual
-    ax3 = fig.add_subplot(gs[1])
-    ax3.axis('off')
+    ax_tabla.axis('off')
     tabla_ventas_limitada = tabla_ventas[:mes_limite]
     tabla_ventas_display = tabla_ventas_limitada[['Mes', 'Actual', 'Año Anterior', 'Diferencia', 'Diferencia %']]
     
-    table1 = ax3.table(cellText=tabla_ventas_display.values,
+    table1 = ax_tabla.table(cellText=tabla_ventas_display.values,
                       colLabels=tabla_ventas_display.columns,
                       cellLoc='center', loc='center', bbox=[0, 0, 1, 1])
+    
     table1.auto_set_font_size(False)
     table1.set_fontsize(10)
-    table1.scale(1, 1.5)
+    table1.scale(1, 2)
     
     # Colorear encabezados
     for i in range(len(tabla_ventas_display.columns)):
@@ -422,17 +440,33 @@ def crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante
             if i % 2 == 0:
                 table1[(i, j)].set_facecolor('#f8f9fa')
             
-            # Colorear diferencias porcentuales
-            if j == 4:  # Columna de Diferencia %
-                diff_text = tabla_ventas_display.iloc[i-1]['Diferencia %']
-                if '+' in str(diff_text):
+            # Colorear diferencias según la lógica corregida
+            if j == 3:  # Columna de Diferencia
+                diff_num = tabla_ventas_limitada.iloc[i-1]['Diferencia_Num']
+                if diff_num == 0:
+                    table1[(i, j)].set_facecolor('#f0f0f0')
+                    table1[(i, j)].set_text_props(color='black', weight='normal')
+                elif diff_num > 0:
                     table1[(i, j)].set_facecolor('#e8f5e8')
                     table1[(i, j)].set_text_props(color='#2e7d32', weight='bold')
-                elif '-' in str(diff_text):
+                elif diff_num < 0:
+                    table1[(i, j)].set_facecolor('#ffebee')
+                    table1[(i, j)].set_text_props(color='#d32f2f', weight='bold')
+            
+            # Colorear diferencias porcentuales
+            if j == 4:  # Columna de Diferencia %
+                diff_pct = tabla_ventas_limitada.iloc[i-1]['Diferencia_Pct_Num']
+                if diff_pct == 0:
+                    table1[(i, j)].set_facecolor('#f0f0f0')
+                    table1[(i, j)].set_text_props(color='black', weight='normal')
+                elif diff_pct > 0:
+                    table1[(i, j)].set_facecolor('#e8f5e8')
+                    table1[(i, j)].set_text_props(color='#2e7d32', weight='bold')
+                elif diff_pct < 0:
                     table1[(i, j)].set_facecolor('#ffebee')
                     table1[(i, j)].set_text_props(color='#d32f2f', weight='bold')
     
-    ax3.set_title('Tabla de Ventas Mensuales (Comparativo)', fontsize=14, fontweight='bold', pad=15)
+    # ax_tabla.set_title('Tabla de Ventas Mensuales (Comparativo)', fontsize=14, fontweight='bold', pad=15)
 
     # Tabla de ticket promedio mejorada - solo hasta mes actual
     # ax4 = fig.add_subplot(gs[3])
@@ -509,7 +543,7 @@ def generar_analisis_anual_comparativo(restaurante):
         return None, None
     
     # Crear tablas comparativas
-    tabla_ventas, tabla_tickets = crear_tablas_comparativas_anuales(df_actual, df_anterior)
+    tabla_ventas, tabla_tickets, meses_sin_datos = crear_tablas_comparativas_anuales(df_actual, df_anterior)
     
     # Mostrar resumen en consola
     print(f"\n📈 RESUMEN DE VENTAS MENSUALES:")
@@ -523,6 +557,25 @@ def generar_analisis_anual_comparativo(restaurante):
     # Crear gráficos
     crear_graficos_comparativos_anuales(tabla_ventas, tabla_tickets, restaurante)
     
+    # === ESTADÍSTICAS RESUMIDAS CON LÓGICA CORREGIDA ===
+    total_actual = sum(tabla_ventas['Actual_Num'][:MES_ACTUAL])
+    total_anterior = sum(tabla_ventas['Anterior_Num'][:MES_ACTUAL])
+    
+    # Aplicar la misma lógica: si no hay datos del año anterior, diferencia = 0
+    if total_anterior == 0:
+        diferencia_total = 0
+        porcentaje_total = 0
+        print(f"📊 ESTADÍSTICAS AJUSTADAS: {restaurante} no tenía operaciones en {ANIO_COMPARACION_MENSUAL}")
+    else:
+        diferencia_total = total_actual - total_anterior
+        porcentaje_total = (diferencia_total / total_anterior) * 100
+        print(f"📊 ESTADÍSTICAS NORMALES: Comparación válida entre {ANIO_ACTUAL_MENSUAL} y {ANIO_COMPARACION_MENSUAL}")
+    
+    print(f"\n💰 RESUMEN EJECUTIVO:")
+    print(f"   - Total ventas {ANIO_ACTUAL_MENSUAL}: S/ {total_actual:,.0f}")
+    print(f"   - Total ventas {ANIO_COMPARACION_MENSUAL}: S/ {total_anterior:,.0f}")
+    print(f"   - Diferencia: S/ {diferencia_total:+,.0f} ({porcentaje_total:+.1f}%)")
+    
     # Solo exportar imágenes, no CSV
     print(f"\nAnálisis completado - Solo se exportaron las imágenes")
     
@@ -531,13 +584,22 @@ def generar_analisis_anual_comparativo(restaurante):
 
 if __name__ == "__main__":
     
-    # generar_analisis_anual_comparativo('Patio Cavenecia')
-    for locatario in locatarios_map:
-        print(f"\n Iniciando análisis para: {locatario}")
+    # Modo de ejecución - cambie según necesite
+    MODO = "todos"  # Opciones: "todos", "individual"
+    
+    if MODO == "todos":
+        # Generar análisis para todos los locatarios
+        for locatario in locatarios_map:
+            print(f"\n📊 Iniciando análisis para: {locatario}")
+            generar_analisis_anual_comparativo(locatario)
+    else:
+        # Generar análisis para un locatario individual
+        locatario = 'Bar Refugio'  # Cambie esto al locatario deseado
+        print(f"\n📊 Iniciando análisis para: {locatario}")
         generar_analisis_anual_comparativo(locatario)
         
     print("\n" + "="*60)
-    print("ANÁLISIS COMPLETADO PARA TODOS LOS LOCATARIOS")
+    print("ANÁLISIS COMPLETADO")
     print("Revisa la carpeta 'reportes4' para ver los gráficos de líneas y tablas generados")
     print("="*60)
     

@@ -107,6 +107,7 @@ const reportes = [
                 imagenPath: "/data/scripts/reportes/ranking_global_mensual.png",
                 destinatarios: [
                     "lroque.reyes@la22.pe",
+                    "ccaillaux@la22.pe"
                 ],
             },
             { // taqueado
@@ -237,6 +238,7 @@ const reportes = [
                 imagenPath: "/data/scripts/reportes/ranking_global_mensual.png",
                 destinatarios: [
                     "lroque.reyes@la22.pe",
+                    "ccaillaux@la22.pe"
                 ],
             },
             { // taqueado
@@ -259,7 +261,7 @@ const reportes = [
             },
         ],
     },
-    { 
+    {
         reporteId: "comparativo_ventas_semanal",
         script: "python3 /data/scripts/reporte3.py",
         imagenPath_destinatarios: [
@@ -367,6 +369,7 @@ const reportes = [
                 imagenPath: "/data/scripts/reporte3/reporte_comparativo_completo_la_22.png",
                 destinatarios: [
                     "lroque.reyes@la22.pe",
+                    "ccaillaux@la22.pe"
                 ],
             },
             { // taqueado
@@ -497,6 +500,7 @@ const reportes = [
                 imagenPath: "/data/scripts/reportes4/analisis_anual_comparativo_la_22_2025_vs_2024.png",
                 destinatarios: [
                     "lroque.reyes@la22.pe",
+                    "ccaillaux@la22.pe"
                 ],
             },
             { // taqueado

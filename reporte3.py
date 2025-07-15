@@ -215,28 +215,55 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     acum_actual = ventas_actual.cumsum()
     acum_comparacion = ventas_comparacion.cumsum()
       # Crear tabla de comparación con las columnas solicitadas
+    # LÓGICA CORREGIDA: Si no hay ventas en año anterior (locatario no existía), diferencia = 0
+    # Este enfoque garantiza una comparación justa para los locatarios que no operaban el año anterior
+    # 1. Si ventas_año_anterior = 0: diferencia = 0 (evita mostrar como 100% de crecimiento)
+    # 2. Si ventas_año_anterior > 0: diferencia = ventas_actuales - ventas_año_anterior (cálculo normal)
     tabla_comparativa = pd.DataFrame({
         'nro_semana': semanas_completas,
         'ventas_actuales': ventas_actual.values,
         'ventas_año_anterior': ventas_comparacion.values,
-        'diferencia': ventas_actual.values - ventas_comparacion.values,
-        'diferencia_porcentual': ((ventas_actual.values - ventas_comparacion.values) / ventas_comparacion.values * 100)
+        'diferencia': np.where(ventas_comparacion.values == 0, 0, ventas_actual.values - ventas_comparacion.values),
+        'diferencia_porcentual': np.where(ventas_comparacion.values == 0, 0, 
+                                        ((ventas_actual.values - ventas_comparacion.values) / ventas_comparacion.values * 100))
     })
-     
-    # Manejar divisiones por cero
+    
+    # Manejar casos especiales en diferencia_porcentual
     tabla_comparativa['diferencia_porcentual'] = tabla_comparativa['diferencia_porcentual'].replace([float('inf'), -float('inf')], 0).fillna(0)
-      # Agregar acumulados
+      # Agregar acumulados con la misma lógica corregida
+    # Para datos acumulados aplicamos el mismo principio:
+    # 1. Si acum_año_anterior = 0: dif_acum = 0 (locatario sin historial)
+    # 2. Si acum_año_anterior > 0: dif_acum = acum_actuales - acum_año_anterior (cálculo normal)
     tabla_comparativa['acum_actuales'] = acum_actual.values
     tabla_comparativa['acum_año_anterior'] = acum_comparacion.values
-    tabla_comparativa['dif_acum'] = acum_actual.values - acum_comparacion.values
-    tabla_comparativa['dif_acum_porcentual'] = ((acum_actual.values - acum_comparacion.values) / acum_comparacion.values * 100)
+    tabla_comparativa['dif_acum'] = np.where(acum_comparacion.values == 0, 0, acum_actual.values - acum_comparacion.values)
+    tabla_comparativa['dif_acum_porcentual'] = np.where(acum_comparacion.values == 0, 0,
+                                                      ((acum_actual.values - acum_comparacion.values) / acum_comparacion.values * 100))
     tabla_comparativa['dif_acum_porcentual'] = tabla_comparativa['dif_acum_porcentual'].replace([float('inf'), -float('inf')], 0).fillna(0)
     
-    # Crear figura con gráfico y tabla integrada - TAMAÑO AUMENTADO
-    fig = plt.figure(figsize=(24, 20))
+    # DIAGNÓSTICO: Mostrar semanas sin datos del año anterior
+    semanas_sin_datos_anteriores = tabla_comparativa[tabla_comparativa['ventas_año_anterior'] == 0]['nro_semana'].tolist()
+    if semanas_sin_datos_anteriores:
+        print(f"📋 DIAGNÓSTICO para {restaurante}:")
+        print(f"   - Semanas sin ventas en {ANIO_COMPARACION}: {len(semanas_sin_datos_anteriores)} semanas")
+        print(f"   - Semanas: {semanas_sin_datos_anteriores}")
+        print(f"   - Diferencias ajustadas a 0 (locatario no existía)")
+    else:
+        print(f"✅ {restaurante} tiene datos completos en {ANIO_COMPARACION}")
     
-    # Layout: 50% gráfico, 50% tabla (aprovechar espacio)
-    gs = fig.add_gridspec(2, 1, height_ratios=[1, 1], hspace=0.15)
+    # Crear figura con gráfico y tabla integrada - TAMAÑO AUMENTADO
+    fig = plt.figure(figsize=(24, 21))  # Aumentar un poco la altura para la nota
+    
+    # Determinar si hay semanas sin datos para mostrar la nota explicativa
+    tiene_semanas_sin_datos = any(tabla_comparativa['ventas_año_anterior'] == 0)
+    
+    # Layout adaptativo según necesidad
+    if tiene_semanas_sin_datos:
+        # Con espacio para nota: 45% gráfico, 10% nota, 45% tabla
+        gs = fig.add_gridspec(3, 1, height_ratios=[0.9, 0.1, 0.9], hspace=0.1)
+    else:
+        # Sin nota: 50% gráfico, 50% tabla
+        gs = fig.add_gridspec(2, 1, height_ratios=[1, 1], hspace=0.15)
     
     # === GRÁFICO PRINCIPAL ===
     ax_main = fig.add_subplot(gs[0])
@@ -246,18 +273,18 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     width = 0.35
     
     bars1 = ax_main.bar(x - width/2, tabla_comparativa['ventas_actuales'], width,
-                        label=f'Ventas {ANIO_ACTUAL} (Actuales)', color='#4CAF50', alpha=0.8)
+                        label=f'Ventas {ANIO_ACTUAL} ', color='#4CAF50', alpha=0.8)
     bars2 = ax_main.bar(x + width/2, tabla_comparativa['ventas_año_anterior'], width,
-                        label=f'Ventas {ANIO_COMPARACION} (Referencia)', color='#FFC107', alpha=0.8)
+                        label=f'Ventas {ANIO_COMPARACION}', color='#FFC107', alpha=0.8)
     
     # Eje secundario para acumulados
     ax_secondary = ax_main.twinx()
-    ax_secondary.plot(x, tabla_comparativa['acum_actuales'], 
-                     color='#2E7D32', linewidth=3, marker='o', markersize=4,
-                     label=f'YTD {ANIO_ACTUAL} (acumulado)', linestyle='-')
-    ax_secondary.plot(x, tabla_comparativa['acum_año_anterior'],
-                     color='#F57C00', linewidth=3, marker='s', markersize=4,
-                     label=f'YTD {ANIO_COMPARACION} (acumulado)', linestyle='--')
+    # ax_secondary.plot(x, tabla_comparativa['acum_actuales'], 
+    #                  color='#2E7D32', linewidth=3, marker='o', markersize=4,
+    #                  label=f'YTD {ANIO_ACTUAL} (acumulado)', linestyle='-')
+    # ax_secondary.plot(x, tabla_comparativa['acum_año_anterior'],
+    #                  color='#F57C00', linewidth=3, marker='s', markersize=4,
+    #                  label=f'YTD {ANIO_COMPARACION} (acumulado)', linestyle='--')
     
     # Configurar ejes
     ax_main.set_xlabel('Semana del Año', fontsize=12)
@@ -275,11 +302,43 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     ax_main.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=10)
     
     ax_main.grid(True, alpha=0.3)
-      # === ESTADÍSTICAS RESUMIDAS ===
+    
+    # === NOTA EXPLICATIVA ENTRE GRÁFICO Y TABLA ===
+    # Crear área para la nota si hay semanas sin datos
+    if tiene_semanas_sin_datos:
+        # Agregar la nota explicativa
+        ax_nota = fig.add_subplot(gs[1])
+        ax_nota.axis('off')  # Sin ejes para la nota
+        
+        # Crear el texto de la nota
+        semanas_sin_datos_count = len(semanas_sin_datos_anteriores)
+        nota_texto = (f"NOTA IMPORTANTE: {restaurante} presenta {semanas_sin_datos_count} semanas con diferencias = 0 "
+                     f"debido a que no tuvo operaciones durante esas fechas.")  
+        # Mostrar la nota con buen formato
+        ax_nota.text(0.5, 0.0, nota_texto, transform=ax_nota.transAxes,
+                    fontsize=12, fontweight='bold', ha='center', va='center',
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="lightyellow", 
+                              alpha=0.95, edgecolor='orange', linewidth=1),
+                    wrap=True)
+        
+        # Configurar el subplot para la tabla
+        ax_table = fig.add_subplot(gs[2])
+    else:
+        # Si no hay semanas sin datos, usar el layout original
+        ax_table = fig.add_subplot(gs[1])
+      # === ESTADÍSTICAS RESUMIDAS CON LÓGICA CORREGIDA ===
     total_actual = tabla_comparativa['acum_actuales'].iloc[-1]
     total_comparacion = tabla_comparativa['acum_año_anterior'].iloc[-1]
-    diferencia_total = total_actual - total_comparacion
-    porcentaje_total = (diferencia_total / total_comparacion * 100) if total_comparacion != 0 else 0
+    
+    # Aplicar la misma lógica: si no hay datos del año anterior, diferencia = 0
+    if total_comparacion == 0:
+        diferencia_total = 0
+        porcentaje_total = 0
+        print(f"📊 ESTADÍSTICAS AJUSTADAS: {restaurante} no tenía operaciones en {ANIO_COMPARACION}")
+    else:
+        diferencia_total = total_actual - total_comparacion
+        porcentaje_total = (diferencia_total / total_comparacion * 100)
+        print(f"📊 ESTADÍSTICAS NORMALES: Comparación válida entre {ANIO_ACTUAL} y {ANIO_COMPARACION}")
     
     # Texto de estadísticas en el gráfico
     # stats_text = f"Total {ANIO_ACTUAL}: S/ {total_actual:,.0f} | Total {ANIO_COMPARACION}: S/ {total_comparacion:,.0f} | Diferencia: {porcentaje_total:+.1f}%"
@@ -287,7 +346,7 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     #             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.8),
     #             fontsize=12, fontweight='bold', ha='center')
       # === TABLA DE DATOS ===
-    ax_table = fig.add_subplot(gs[1])
+    # ax_table ya se definió en la sección anterior según el layout
     ax_table.axis('off')
       # Preparar datos de la tabla - MOSTRAR TODAS LAS SEMANAS DESDE LA 1
     tabla_display = tabla_comparativa.copy().round(0)  # TODAS las semanas, no solo las últimas
@@ -337,6 +396,9 @@ def generar_reporte_comparativo_con_tabla(restaurante):
             if j in [3, 4, 7, 8]:  # Columnas de diferencias
                 try:
                     valor_dif = tabla_display.iloc[i-1]['diferencia'] if j in [3, 4] else tabla_display.iloc[i-1]['dif_acum']
+                    if valor_dif == 0:
+                        table[(i, j)].set_facecolor('#f0f0f0')
+                        table[(i, j)].set_text_props(color='black', weight='normal')
                     if valor_dif > 0:
                         table[(i, j)].set_facecolor('#e8f5e8')
                         table[(i, j)].set_text_props(color='#2e7d32', weight='bold')
@@ -349,7 +411,9 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     fig.suptitle(f'Reporte Comparativo Completo - {restaurante}\n'
                  f'Total {ANIO_ACTUAL}: S/ {total_actual:,.0f} | Total {ANIO_COMPARACION}: S/ {total_comparacion:,.0f} | '
                  f'Diferencia: {porcentaje_total:+.1f}%', 
-                 fontsize=16, fontweight='bold', y=0.96)
+                 fontsize=16, fontweight='bold', y=0.95)
+    
+    # ax_table.set_title('Tabla de Ventas Semanales (Comparativo)', fontsize=14, fontweight='bold', pad=15)
     
     # Guardar archivos
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
@@ -360,16 +424,15 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     plt.close()
       
     # Guardar tabla completa en CSV
-    tabla_comparativa = []
-    # tabla_comparativa.to_csv(f'reportes3/tabla_comparativa_completa_{restaurante.replace(" ", "_").lower()}.csv', index=False)    
-    print(f'\nReporte comparativo completo generado para {restaurante}')
-    print(f'Archivos creados:')
-    print(f'   - reporte_comparativo_completo_{restaurante.replace(" ", "_").lower()}.png')
-    print(f'   - tabla_comparativa_completa_{restaurante.replace(" ", "_").lower()}.csv')
-    print(f'\nResumen de resultados:')
-    print(f'   - Total ventas {ANIO_ACTUAL}: S/ {total_actual:,.0f}')
-    print(f'   - Total ventas {ANIO_COMPARACION}: S/ {total_comparacion:,.0f}')
-    print(f'   - Diferencia: S/ {diferencia_total:,.0f} ({porcentaje_total:+.1f}%)')
+    # tabla_comparativa.to_csv(f'{OUTPUT_FOLDER}/tabla_comparativa_completa_{restaurante.replace(" ", "_").lower()}.csv', index=False)
+    # print(f'\nReporte comparativo completo generado para {restaurante}')
+    # print(f'Archivos creados:')
+    # print(f'   - reporte_comparativo_completo_{restaurante.replace(" ", "_").lower()}.png')
+    # print(f'   - tabla_comparativa_completa_{restaurante.replace(" ", "_").lower()}.csv')
+    # print(f'\nResumen de resultados:')
+    # print(f'   - Total ventas {ANIO_ACTUAL}: S/ {total_actual:,.0f}')
+    # print(f'   - Total ventas {ANIO_COMPARACION}: S/ {total_comparacion:,.0f}')
+    # print(f'   - Diferencia: S/ {diferencia_total:,.0f} ({porcentaje_total:+.1f}%)')
     
     return tabla_comparativa
 
@@ -427,13 +490,22 @@ def obtener_datos_anio_comparacion_real(restaurante_objetivo):
         # Retornar DataFrame vacío para que se usen ceros en la comparación
         return pd.DataFrame()    
 if __name__ == "__main__":
-  
-    # generar reporte de todos los locatarios
-    # generar_reporte_comparativo_con_tabla('Bodega Turca')
-    for locatario in locatarios_map:
-        print(f"\nGenerando reporte para: {locatario}")
+    
+    # Modo de ejecución - cambie según necesite
+    MODO = "indi"  # Opciones: "todos", "individual"
+    
+    if MODO == "todos":
+        # Generar reporte de todos los locatarios
+        # generar_reporte_comparativo_con_tabla('MR SMASH') 
+        for locatario in locatarios_map:
+            print(f"\n📊 Generando reporte para: {locatario}")
+            generar_reporte_comparativo_con_tabla(locatario)
+    else:
+        # Generar reporte para un locatario individual
+        locatario = 'Bar Refugio'  # Cambie esto al locatario deseado
+        print(f"\n📊 Generando reporte para: {locatario}")
         generar_reporte_comparativo_con_tabla(locatario)
         
-    print("\n Todos los reportes fueron generados exitosamente.")
+    print("\n✅ Todos los reportes fueron generados exitosamente.")
 
 
