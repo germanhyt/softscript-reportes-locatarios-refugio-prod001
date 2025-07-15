@@ -384,6 +384,7 @@ def generar_reporte_comparativo_con_tabla(restaurante):
     for i in range(len(headers)):
         table[(0, i)].set_facecolor('#1976D2')
         table[(0, i)].set_text_props(weight='bold', color='white')
+        table[(0, i)].set_height(0.1)  # Aumentar altura de encabezados                       )
     
     # Colorear filas y diferencias
     for i in range(1, len(tabla_formateada) + 1):
@@ -492,7 +493,7 @@ def obtener_datos_anio_comparacion_real(restaurante_objetivo):
 if __name__ == "__main__":
     
     # Modo de ejecución - cambie según necesite
-    MODO = "indi"  # Opciones: "todos", "individual"
+    MODO = "todos"  # Opciones: "todos", "individual"
     
     if MODO == "todos":
         # Generar reporte de todos los locatarios
